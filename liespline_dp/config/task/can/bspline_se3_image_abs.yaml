@@ -1,0 +1,51 @@
+defaults:
+- /task/can/_bspline_se3@_here_
+- _self_
+conversion:
+  input_path: data/robomimic/datasets/${..task_name}/${..dataset_type}/image_abs.hdf5
+  output_path: data/robomimic/datasets/${..task_name}/${..dataset_type}/image_abs_bspline_se3.zarr
+  obs_source: robomimic_image
+  obs_keys:
+  - robot0_eef_pos
+  - robot0_eef_quat
+  - robot0_gripper_qpos
+  image_obs_keys:
+  - agentview_image
+  - robot0_eye_in_hand_image
+  - robot0_eef_pos
+  - robot0_eef_quat
+  - robot0_gripper_qpos
+env_runner:
+  _target_: liespline_dp.env_runner.robomimic_image_runner.RobomimicImageRunner
+  shape_meta: ${..shape_meta}
+  render_obs_key: agentview_image
+dataset:
+  _target_: liespline_dp.dataset.bspline_se3_image_dataset.BsplineSE3ImageDataset
+  shape_meta: ${..shape_meta}
+name: bspline_se3_can_image_abs
+shape_meta:
+  obs:
+    agentview_image:
+      shape:
+      - 3
+      - 84
+      - 84
+      type: rgb
+    robot0_eye_in_hand_image:
+      shape:
+      - 3
+      - 84
+      - 84
+      type: rgb
+    robot0_eef_pos:
+      shape:
+      - 3
+    robot0_eef_quat:
+      shape:
+      - 4
+    robot0_gripper_qpos:
+      shape:
+      - 2
+  action:
+    shape:
+    - 7

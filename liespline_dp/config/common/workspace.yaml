@@ -1,0 +1,57 @@
+# @package _global_
+# Shared optimizer, EMA, logging and runtime defaults. No task-specific values.
+task_name: ${task.name}
+policy:
+  noise_scheduler:
+    num_train_timesteps: 100
+    beta_start: 0.0001
+    beta_end: 0.02
+    beta_schedule: squaredcos_cap_v2
+    clip_sample: true
+    prediction_type: epsilon
+ema:
+  _target_: liespline_dp.model.diffusion.ema_model.EMAModel
+  update_after_step: 0
+  inv_gamma: 1.0
+  power: 0.75
+  min_value: 0.0
+  max_value: 0.9999
+dataloader:
+  shuffle: true
+  pin_memory: true
+  persistent_workers: false
+val_dataloader:
+  shuffle: false
+  pin_memory: true
+  persistent_workers: false
+optimizer:
+  betas:
+  - 0.9
+  - 0.95
+training:
+  device: cuda:0
+  seed: 42
+  debug: false
+  lr_scheduler: cosine
+  gradient_accumulate_every: 1
+  use_ema: true
+  val_every: 1
+  sample_every: 5
+  max_train_steps: null
+  max_val_steps: null
+  tqdm_interval_sec: 1.0
+logging:
+  mode: online
+  name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}
+  id: null
+  group: null
+checkpoint:
+  topk:
+    k: 5
+  save_last_ckpt: true
+  save_last_snapshot: false
+hydra:
+  job:
+    override_dirname: ${name}
+  run:
+    dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}

@@ -1,0 +1,11 @@
+defaults:
+- /task/real_robot/_baseline@_here_
+- _self_
+name: real_robot_baseline_image_pose_only
+action_format: pose_only
+shape_meta:
+  action:
+    shape:
+    - 9
+dataset:
+  cache_path: data/real_robot/cache/baseline_image_pose_only.zarr

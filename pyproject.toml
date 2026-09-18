@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "liespline-dp"
+version = "0.1.0"
+description = "Diffusion policies with continuous SE(3) B-spline actions"
+readme = "README.md"
+requires-python = ">=3.10,<3.11"
+license = {file = "LICENSE"}
+dependencies = [
+    "numpy==1.26.4",
+    "torch==2.5.1",
+    "torchvision==0.20.1",
+    "hydra-core==1.3.2",
+    "omegaconf==2.3.0",
+    "diffusers==0.30.3",
+    "huggingface-hub==0.25.2",
+    "einops==0.8.1",
+    "dill==0.3.9",
+    "wandb==0.22.3",
+    "tqdm==4.70.0",
+    "pandas==2.2.3",
+    "click==8.4.2",
+    "scipy==1.14.1",
+    "zarr==2.18.3",
+    "numcodecs==0.13.1",
+    "numba==0.61.2",
+    "h5py==3.12.1",
+    "filelock==3.29.4",
+    "threadpoolctl==3.5.0",
+    "opencv-python==4.10.0.84",
+    "imagecodecs==2024.12.30",
+]
+
+[project.optional-dependencies]
+simulation = [
+    "mujoco==3.2.3",
+    "mink==0.0.5",
+    "robosuite @ git+https://github.com/ARISE-Initiative/robosuite.git@51cc01785bab80ffeed20da15e67d7dd4140e76a",
+    "robomimic @ git+https://github.com/ARISE-Initiative/robomimic.git@7c66e7a41b5d9dcc905b1a68346bfee1b49b79c9",
+    "gym==0.26.2",
+    "av==13.1.0",
+    "matplotlib==3.9.2",
+    "egl_probe==1.0.2",
+    "pynput==1.8.2",
+    "tensorboard==2.18.0",
+    "tensorboardX==2.6.2.2",
+    "termcolor==2.5.0",
+    "imageio==2.37.4",
+    "imageio-ffmpeg==0.6.0",
+]
+robot = ["pyzmq==26.2.0"]
+
+[tool.setuptools.packages.find]
+include = ["liespline_dp*"]
+
+[tool.setuptools.package-data]
+liespline_dp = ["config/**/*.yaml"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100

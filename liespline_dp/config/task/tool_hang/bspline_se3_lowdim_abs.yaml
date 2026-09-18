@@ -1,0 +1,33 @@
+defaults:
+- /task/tool_hang/_bspline_se3@_here_
+- _self_
+conversion:
+  input_path: data/robomimic/datasets/${..task_name}/${..dataset_type}/low_dim_abs.hdf5
+  output_path: data/robomimic/datasets/${..task_name}/${..dataset_type}/low_dim_abs_bspline_se3.zarr
+  obs_source: robomimic_lowdim
+  obs_keys:
+  - object
+  - robot0_eef_pos
+  - robot0_eef_quat
+  - robot0_gripper_qpos
+env_runner:
+  _target_: liespline_dp.env_runner.robomimic_lowdim_runner.RobomimicLowdimRunner
+  obs_keys: ${..conversion.obs_keys}
+  render_hw:
+  - 128
+  - 128
+  control_freq: ${..bspline.control_freq}
+dataset:
+  _target_: liespline_dp.dataset.robomimic_bspline_se3_lowdim_dataset.RobomimicBsplineSE3LowdimDataset
+  obs_key: obs
+  obs_normalizer_mode: limits
+name: bspline_se3_tool_hang_lowdim_abs
+obs_dim: 53
+policy:
+  gripper_loss_weight: 0.1
+  p_drop_attn: 0.3
+  prefix_corruption_probability: 0.3
+  noise_scheduler:
+    clip_sample_range: 2.0
+optimizer:
+  weight_decay: 0.0001

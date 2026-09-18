@@ -1,0 +1,55 @@
+# Shared task parameters; modality files only add disjoint fields.
+horizon: 16
+n_obs_steps: 2
+n_action_steps: 8
+n_latency_steps: 2
+n_infer_steps: ${eval:'${.n_action_steps}-${.n_latency_steps}'}
+dataset_obs_steps: ${.n_obs_steps}
+action_label_offset_steps: ${.n_latency_steps}
+prediction_alignment: plan_boundary
+past_action_visible: false
+obs_as_cond: true
+tcp_target_quat_order: xyzw
+control_frequency_hz: 15.0
+shape_meta:
+  obs:
+    wrist_rgb:
+      shape:
+      - 3
+      - 240
+      - 320
+      type: rgb
+    global_rgb:
+      shape:
+      - 3
+      - 240
+      - 320
+      type: rgb
+    eef_pos:
+      shape:
+      - 3
+      type: low_dim
+    eef_quat:
+      shape:
+      - 4
+      type: low_dim
+dataset:
+  _target_: liespline_dp.dataset.real_robot_image_dataset.RealRobotImageDataset
+  shape_meta: ${..shape_meta}
+  dataset_root: data/real_robot/episodes
+  horizon: ${..horizon}
+  pad_before: ${eval:'${..n_obs_steps}-1'}
+  pad_after: ${eval:'${..n_action_steps}-1'}
+  n_obs_steps: ${..n_obs_steps}
+  n_latency_steps: ${..n_latency_steps}
+  active_only: true
+  min_episode_steps: ${eval:'${..horizon}+${..n_latency_steps}-${..n_obs_steps}-${..n_action_steps}+2'}
+  rebuild_cache: false
+  target_quat_order: wxyz
+  gripper_bounds:
+  - 0.0
+  - 5.0
+  action_format: ${..action_format}
+  seed: 42
+  val_ratio: 0.02
+  max_train_episodes: null

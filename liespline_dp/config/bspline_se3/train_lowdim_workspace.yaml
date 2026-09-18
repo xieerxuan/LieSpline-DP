@@ -1,0 +1,101 @@
+# @package _global_
+# Model architecture and training schedule; task owns data, timing and coordinates.
+defaults:
+- /common/workspace
+- _self_
+- /task: lift/bspline_se3_lowdim_abs
+name: train_bspline_se3_lowdim
+_target_: liespline_dp.workspace.bspline_se3.train_lowdim_workspace.TrainLieSplineLowdimWorkspace
+obs_dim: ${task.obs_dim}
+action_dim: ${task.action_dim}
+trajectory_dim: ${task.trajectory_dim}
+exp_name: default
+horizon: ${eval:'${task.bspline.prefix_cp_steps} + ${task.bspline.pred_horizon}'}
+diffusion_prefix_cp_steps: ${task.bspline.prefix_cp_steps}
+pose_diffusion_horizon: ${eval:'${task.bspline.pred_horizon} + ${diffusion_prefix_cp_steps}'}
+diffusion_horizon: ${eval:'max(${pose_diffusion_horizon}, ${task.bspline.n_action_steps})'}
+boundary_condition_steps: ${eval:'int(${diffusion_prefix_cp_steps} < ${task.bspline.prefix_cp_steps})'}
+n_obs_steps: ${task.bspline.n_obs_steps}
+n_action_steps: ${task.bspline.n_action_steps}
+n_infer_steps: ${task.n_infer_steps}
+n_latency_steps: ${task.n_latency_steps}
+past_action_visible: ${task.past_action_visible}
+policy:
+  _target_: liespline_dp.policy.bspline_se3.bspline_se3_lowdim_policy.BsplineSE3LowdimPolicy
+  target_attn_mode: block_causal
+  model:
+    _target_: liespline_dp.model.diffusion.transformer_for_diffusion.TransformerForDiffusion
+    input_dim: ${eval:'${trajectory_dim} + ${task.se3.gripper_dim} * ${task.se3.num_robots}'}
+    output_dim: ${eval:'${trajectory_dim} + ${task.se3.gripper_dim} * ${task.se3.num_robots}'}
+    horizon: ${diffusion_horizon}
+    n_obs_steps: ${eval:'${n_obs_steps} + ${boundary_condition_steps}'}
+    cond_dim: ${obs_dim}
+    n_layer: 8
+    n_head: 4
+    n_emb: 256
+    p_drop_emb: 0.0
+    p_drop_attn: ${oc.select:task.policy.p_drop_attn,0.3}
+    time_as_cond: true
+    obs_as_cond: true
+    n_cond_layers: 0
+  noise_scheduler:
+    _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
+    variance_type: fixed_small
+    clip_sample_range: ${oc.select:task.policy.noise_scheduler.clip_sample_range,1.0}
+  action_pose_adapter: ${task.action_pose_adapter}
+  horizon: ${horizon}
+  obs_dim: ${obs_dim}
+  action_dim: ${action_dim}
+  trajectory_dim: ${trajectory_dim}
+  gripper_dim: ${task.se3.gripper_dim}
+  num_robots: ${task.se3.num_robots}
+  initial_gripper: ${task.se3.initial_gripper}
+  binarize_gripper: ${task.se3.binarize_gripper}
+  gripper_loss_weight: ${oc.select:task.policy.gripper_loss_weight,0.2}
+  prefix_cp_steps: ${task.bspline.prefix_cp_steps}
+  diffusion_prefix_cp_steps: ${diffusion_prefix_cp_steps}
+  n_action_steps: ${n_action_steps}
+  n_obs_steps: ${n_obs_steps}
+  num_inference_steps: 100
+  degree: ${task.bspline.degree}
+  exec_horizon: ${task.bspline.exec_horizon}
+  prefix_corruption_probability: ${oc.select:task.policy.prefix_corruption_probability,0.0}
+  prefix_corruption_scale_min: 0.0
+  prefix_corruption_scale_max: 1.0
+  prefix_corruption_translation_std: 0.002
+  prefix_corruption_rotation_std_deg: 1.0
+dataloader:
+  batch_size: 256
+  num_workers: 8
+val_dataloader:
+  batch_size: 256
+  num_workers: 1
+optimizer:
+  learning_rate: ${oc.select:task.optimizer.learning_rate,1.0e-4}
+  weight_decay: ${oc.select:task.optimizer.weight_decay,1.0e-3}
+training:
+  resume: true
+  lr_num_epochs: null
+  lr_warmup_steps: 1000
+  num_epochs: 8000
+  num_training_steps: null
+  lr_num_training_steps: null
+  rollout_every: 50
+  rollout_first_step: null
+  rollout_every_steps: null
+  rollout_num_points: null
+  rollout_epoch_stride: null
+  checkpoint_every: 50
+logging:
+  project: liespline-dp
+  resume: true
+  tags:
+  - bspline_se3_lowdim
+  - ${task_name}
+  - ${exp_name}
+checkpoint:
+  topk:
+    monitor_key: test_mean_score
+    mode: max
+    format_str: epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt
+  save_final_ema_ckpt: false

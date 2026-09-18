@@ -1,0 +1,122 @@
+# Shared task parameters; modality files only add disjoint fields.
+task_name: tool_hang
+action_dim: 7
+trajectory_dim: 6
+dataset_type: ph
+past_action_visible: false
+n_latency_steps: 0
+n_infer_steps: ${eval:'${.bspline.n_action_steps}-${.n_latency_steps}'}
+bspline:
+  degree: 3
+  pred_horizon: 8
+  sample_stride: 1
+  pad_terminal: true
+  n_obs_steps: 2
+  demo_control_freq: 20
+  exec_horizon: 4
+  control_point_stride: 2
+  n_action_steps: ${eval:'${.exec_horizon} * ${.control_point_stride}'}
+  control_freq: ${eval:'int(round(${.demo_control_freq} * ${.n_action_steps} / (${.exec_horizon} * ${.control_point_stride})))'}
+  prefix_cp_steps: ${.degree}
+se3:
+  representation: local_tangent_control_pose
+  spline_eval: cumulative_lie
+  tangent_order: rho_phi
+  increment_side: right
+  fit_translation_scale_m: 1.0
+  fit_rotation_scale_rad: 1.0
+  pose_action_format: xyz_axis_angle
+  gripper_dim: 1
+  binarize_gripper: true
+  initial_gripper:
+  - -1.0
+  num_robots: 1
+conversion:
+  action_rep: axis_angle
+  action_key: actions
+  demo_group: data
+  fit_method: cumulative_lie_lsq
+  fit_point_weight:
+    enabled: true
+    detector: cfrc_ext_delta
+    base_weight: 1.0
+    proximity_weight: 3.0
+    proximity_neighborhood: 3
+    contact_weight: 32.0
+    contact_neighborhood: 1
+    gripper_switch_weight: 32.0
+    gripper_switch_neighborhood: 2
+    torque_delta_weight: 0.2
+    ema_alpha: 0.35
+    force_delta_threshold: null
+    mad_multiplier: 6.0
+    min_force_delta_threshold: 1.0e-06
+    warmup_steps: 1
+    cooldown_steps: 2
+    body_name_patterns:
+    - eef
+    - gripper
+    - finger
+    - hand
+    exclude_body_name_patterns:
+    - camera
+    - mount
+    - base
+    - world
+  start_offset_augmentation:
+    enabled: true
+env_runner:
+  n_train: 6
+  n_train_vis: 2
+  train_start_idx: 0
+  n_test: 50
+  n_test_vis: 4
+  test_start_seed: 100000
+  max_steps: ${eval:'int(round(700 * ${..bspline.control_freq} / ${..bspline.demo_control_freq}))'}
+  n_obs_steps: ${..bspline.n_obs_steps}
+  n_action_steps: ${..bspline.n_action_steps}
+  n_infer_steps: ${..n_infer_steps}
+  prediction_alignment: plan_boundary
+  fps: 10
+  crf: 22
+  past_action: ${..past_action_visible}
+  abs_action: true
+  action_rotation_rep: ${..conversion.action_rep}
+  tqdm_interval_sec: 1.0
+  n_envs: 28
+  dataset_path: ${..conversion.input_path}
+dataset:
+  zarr_path: ${..conversion.output_path}
+  degree: ${..bspline.degree}
+  prefix_cp_steps: ${..bspline.prefix_cp_steps}
+  control_point_stride: ${..bspline.control_point_stride}
+  exec_horizon: ${..bspline.exec_horizon}
+  n_obs_steps: ${..bspline.n_obs_steps}
+  n_action_steps: ${..bspline.n_action_steps}
+  n_latency_steps: ${..n_latency_steps}
+  trajectory_horizon: ${eval:'${..bspline.prefix_cp_steps} + ${..bspline.pred_horizon}'}
+  trajectory_key: trajectory
+  condition_data_key: condition_data
+  condition_mask_key: condition_mask
+  split_key: source_demo_idx
+  seed: 42
+  val_ratio: 0.02
+  max_train_source_episodes: null
+  anchor_contract: ${..anchor_contract}
+action_pose_adapter:
+  _target_: liespline_dp.common.action_pose_adapter.RobomimicAbsActionPoseAdapter
+  action_rotation_rep: ${..conversion.action_rep}
+  gripper_dim: ${..se3.gripper_dim}
+  obs_keys: ${..conversion.obs_keys}
+  obs_eef_to_action_compose_side: right
+  obs_eef_to_action_rotvec:
+  - 0.0
+  - 0.0
+  - -1.5707963267948966
+  n_robots: ${..se3.num_robots}
+anchor_contract:
+  family: robomimic
+  adapter_target: ${..action_pose_adapter._target_}
+  compose_side: ${..action_pose_adapter.obs_eef_to_action_compose_side}
+  rotvec: ${..action_pose_adapter.obs_eef_to_action_rotvec}
+  num_robots: ${..action_pose_adapter.n_robots}

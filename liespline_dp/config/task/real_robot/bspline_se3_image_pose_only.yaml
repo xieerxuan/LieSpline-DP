@@ -1,0 +1,30 @@
+defaults:
+- /task/real_robot/_bspline_se3@_here_
+- _self_
+name: real_robot_bspline_se3_image_pose_only
+action_format: pose_only
+action_dim: 9
+shape_meta:
+  action:
+    shape:
+    - 9
+se3:
+  gripper_dim: 0
+action_pose_adapter:
+  obs_keys:
+  - eef_pos
+  - eef_quat
+conversion:
+  input_path: data/real_robot/cache/baseline_image_pose_only.zarr
+  output_path: data/real_robot/cache/bspline_se3_image_pose_only.zarr
+  obs_keys:
+  - wrist_rgb
+  - global_rgb
+  - eef_pos
+  - eef_quat
+  fit_point_weight:
+    gripper:
+      enabled: false
+dataset:
+  gripper_waypoint_key: null
+  gripper_control_point_key: null

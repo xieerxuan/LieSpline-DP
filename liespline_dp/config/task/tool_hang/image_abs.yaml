@@ -1,0 +1,43 @@
+defaults:
+- /task/tool_hang/_baseline@_here_
+- _self_
+name: tool_hang_image_abs
+shape_meta:
+  obs:
+    sideview_image:
+      shape:
+      - 3
+      - 240
+      - 240
+      type: rgb
+    robot0_eye_in_hand_image:
+      shape:
+      - 3
+      - 240
+      - 240
+      type: rgb
+    robot0_eef_pos:
+      shape:
+      - 3
+    robot0_eef_quat:
+      shape:
+      - 4
+    robot0_gripper_qpos:
+      shape:
+      - 2
+  action:
+    shape:
+    - 10
+dataset_path: data/robomimic/datasets/${.task_name}/${.dataset_type}/image_abs.hdf5
+env_runner:
+  _target_: liespline_dp.env_runner.robomimic_image_runner.RobomimicImageRunner
+  dataset_path: ${..dataset_path}
+  shape_meta: ${..shape_meta}
+  render_obs_key: sideview_image
+  tqdm_interval_sec: 1.0
+dataset:
+  _target_: liespline_dp.dataset.robomimic_replay_image_dataset.RobomimicReplayImageDataset
+  shape_meta: ${..shape_meta}
+  dataset_path: ${..dataset_path}
+  n_obs_steps: ${..dataset_obs_steps}
+  use_cache: true

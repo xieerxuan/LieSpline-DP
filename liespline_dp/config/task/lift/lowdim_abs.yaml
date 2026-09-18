@@ -1,0 +1,26 @@
+defaults:
+- /task/lift/_baseline@_here_
+- _self_
+name: lift_lowdim
+obs_dim: 19
+action_dim: 10
+keypoint_dim: 3
+obs_keys:
+- object
+- robot0_eef_pos
+- robot0_eef_quat
+- robot0_gripper_qpos
+dataset_path: data/robomimic/datasets/${.task_name}/${.dataset_type}/low_dim_abs.hdf5
+env_runner:
+  _target_: liespline_dp.env_runner.robomimic_lowdim_runner.RobomimicLowdimRunner
+  dataset_path: ${..dataset_path}
+  obs_keys: ${..obs_keys}
+  n_test_vis: 3
+  render_hw:
+  - 128
+  - 128
+dataset:
+  _target_: liespline_dp.dataset.robomimic_replay_lowdim_dataset.RobomimicReplayLowdimDataset
+  dataset_path: ${..dataset_path}
+  obs_keys: ${..obs_keys}
+  obs_normalizer_mode: limits

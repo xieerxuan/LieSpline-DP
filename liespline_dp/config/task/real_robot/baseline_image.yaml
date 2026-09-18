@@ -1,0 +1,16 @@
+defaults:
+- /task/real_robot/_baseline@_here_
+- _self_
+name: real_robot_baseline_image
+action_format: pose_gripper
+shape_meta:
+  obs:
+    gripper_q:
+      shape:
+      - 1
+      type: low_dim
+  action:
+    shape:
+    - 10
+dataset:
+  cache_path: data/real_robot/cache/baseline_image.zarr

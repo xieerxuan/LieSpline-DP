@@ -1,0 +1,17 @@
+name: liespline-dp
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.10
+  - pip
+  - git
+  - cmake>=3.22,<4  # egl_probe's build scripts require CMake 3.x.
+  - numpy=1.26.4
+  - pytorch=2.5.1
+  - torchvision=0.20.1
+  - pytorch-cuda=12.1
+# Python application dependencies are owned by pyproject.toml.
+# After activation: python -m pip install -e '.[simulation,robot]'

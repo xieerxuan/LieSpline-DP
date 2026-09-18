@@ -1,0 +1,64 @@
+# @package _global_
+# Model architecture and training schedule; task owns data, timing and coordinates.
+defaults:
+- /common/workspace
+- _self_
+- /task: real_robot/baseline_image
+name: train_real_robot
+_target_: liespline_dp.workspace.baseline.train_real_robot_workspace.TrainBaselineRealRobotWorkspace
+shape_meta: ${task.shape_meta}
+exp_name: baseline
+policy:
+  _target_: liespline_dp.policy.baseline.diffusion_image_policy.DiffusionImagePolicy
+  shape_meta: ${shape_meta}
+  noise_scheduler:
+    _target_: diffusers.schedulers.scheduling_ddim.DDIMScheduler
+    set_alpha_to_one: true
+    steps_offset: 0
+  horizon: ${task.horizon}
+  n_action_steps: ${task.n_action_steps}
+  n_obs_steps: ${task.n_obs_steps}
+  num_inference_steps: 8
+  crop_shape:
+  - 216
+  - 288
+  obs_encoder_group_norm: true
+  eval_fixed_crop: true
+  n_layer: 8
+  n_cond_layers: 0
+  n_head: 4
+  n_emb: 256
+  p_drop_emb: 0.0
+  p_drop_attn: 0.3
+  causal_attn: true
+  time_as_cond: true
+  obs_as_cond: ${task.obs_as_cond}
+dataloader:
+  batch_size: 64
+  num_workers: 8
+val_dataloader:
+  batch_size: 64
+  num_workers: 4
+optimizer:
+  transformer_weight_decay: 0.001
+  obs_encoder_weight_decay: 1.0e-06
+  learning_rate: 0.0001
+training:
+  resume: false
+  lr_warmup_steps: 500
+  num_epochs: 2000
+  rollout_every: null
+  checkpoint_every: 25
+logging:
+  project: liespline-dp
+  resume: false
+  tags:
+  - real_baseline
+  - ${task_name}
+  - ${exp_name}
+checkpoint:
+  ema_checkpoint_every: 50
+  topk:
+    monitor_key: val_loss
+    mode: min
+    format_str: epoch={epoch:04d}-val_loss={val_loss:.4f}.ckpt

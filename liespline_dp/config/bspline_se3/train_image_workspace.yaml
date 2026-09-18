@@ -1,0 +1,90 @@
+# @package _global_
+# Model architecture and training schedule; task owns data, timing and coordinates.
+defaults:
+- /common/workspace
+- _self_
+- /task: lift/bspline_se3_image_abs
+name: train_bspline_se3_image
+_target_: liespline_dp.workspace.bspline_se3.train_image_workspace.TrainLieSplineImageWorkspace
+action_dim: ${task.action_dim}
+trajectory_dim: ${task.trajectory_dim}
+exp_name: default
+horizon: ${eval:'${task.bspline.prefix_cp_steps} + ${task.bspline.pred_horizon}'}
+diffusion_prefix_cp_steps: ${task.bspline.prefix_cp_steps}
+pose_diffusion_horizon: ${eval:'${task.bspline.pred_horizon} + ${diffusion_prefix_cp_steps}'}
+diffusion_horizon: ${eval:'max(${pose_diffusion_horizon}, ${task.bspline.n_action_steps})'}
+boundary_condition_steps: ${eval:'int(${diffusion_prefix_cp_steps} < ${task.bspline.prefix_cp_steps})'}
+n_obs_steps: ${task.bspline.n_obs_steps}
+n_action_steps: ${task.bspline.n_action_steps}
+n_infer_steps: ${task.n_infer_steps}
+n_latency_steps: ${task.n_latency_steps}
+past_action_visible: ${task.past_action_visible}
+policy:
+  _target_: liespline_dp.policy.bspline_se3.bspline_se3_image_policy.BsplineSE3ImagePolicy
+  target_attn_mode: block_causal
+  shape_meta: ${task.shape_meta}
+  noise_scheduler:
+    _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
+    variance_type: fixed_small
+  action_pose_adapter: ${task.action_pose_adapter}
+  horizon: ${horizon}
+  trajectory_dim: ${trajectory_dim}
+  gripper_dim: ${task.se3.gripper_dim}
+  num_robots: ${task.se3.num_robots}
+  initial_gripper: ${task.se3.initial_gripper}
+  binarize_gripper: ${task.se3.binarize_gripper}
+  gripper_loss_weight: ${oc.select:task.policy.gripper_loss_weight,0.1111111111111111}
+  prefix_cp_steps: ${task.bspline.prefix_cp_steps}
+  diffusion_prefix_cp_steps: ${diffusion_prefix_cp_steps}
+  n_action_steps: ${n_action_steps}
+  n_obs_steps: ${n_obs_steps}
+  num_inference_steps: 100
+  degree: ${task.bspline.degree}
+  exec_horizon: ${task.bspline.exec_horizon}
+  prefix_corruption_probability: ${oc.select:task.policy.prefix_corruption_probability,0.7}
+  prefix_corruption_scale_min: 0.0
+  prefix_corruption_scale_max: 1.0
+  prefix_corruption_translation_std: 0.002
+  prefix_corruption_rotation_std_deg: 1.0
+  crop_shape:
+  - 76
+  - 76
+  obs_encoder_group_norm: true
+  eval_fixed_crop: true
+  n_layer: 8
+  n_cond_layers: 0
+  n_head: 4
+  n_emb: 256
+  p_drop_emb: 0.0
+  p_drop_attn: ${oc.select:task.policy.p_drop_attn,0.3}
+  time_as_cond: true
+  obs_as_cond: true
+dataloader:
+  batch_size: 64
+  num_workers: 8
+val_dataloader:
+  batch_size: 64
+  num_workers: 1
+optimizer:
+  transformer_weight_decay: ${oc.select:task.optimizer.transformer_weight_decay,1.0e-3}
+  obs_encoder_weight_decay: 1.0e-06
+  learning_rate: ${oc.select:task.optimizer.learning_rate,1.0e-4}
+training:
+  resume: true
+  lr_num_epochs: null
+  lr_warmup_steps: 1000
+  num_epochs: 3000
+  rollout_every: 50
+  checkpoint_every: 50
+logging:
+  project: liespline-dp
+  resume: true
+  tags:
+  - bspline_se3
+  - ${task_name}
+  - ${exp_name}
+checkpoint:
+  topk:
+    monitor_key: test_mean_score
+    mode: max
+    format_str: epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt

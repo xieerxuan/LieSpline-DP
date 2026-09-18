@@ -1,0 +1,74 @@
+# @package _global_
+# Model architecture and training schedule; task owns data, timing and coordinates.
+defaults:
+- /common/workspace
+- _self_
+- /task: lift/lowdim_abs
+name: train_lowdim
+_target_: liespline_dp.workspace.baseline.train_lowdim_workspace.TrainBaselineLowdimWorkspace
+obs_dim: ${task.obs_dim}
+action_dim: ${task.action_dim}
+exp_name: default
+policy:
+  _target_: liespline_dp.policy.baseline.diffusion_lowdim_policy.DiffusionLowdimPolicy
+  model:
+    _target_: liespline_dp.model.diffusion.transformer_for_diffusion.TransformerForDiffusion
+    input_dim: ${eval:'${action_dim} if ${task.obs_as_cond} else ${obs_dim} + ${action_dim}'}
+    output_dim: ${policy.model.input_dim}
+    horizon: ${task.horizon}
+    n_obs_steps: ${task.n_obs_steps}
+    cond_dim: ${eval:'${obs_dim} if ${task.obs_as_cond} else 0'}
+    n_layer: 8
+    n_head: 4
+    n_emb: 256
+    p_drop_emb: 0.0
+    p_drop_attn: 0.3
+    causal_attn: true
+    time_as_cond: true
+    obs_as_cond: ${task.obs_as_cond}
+    n_cond_layers: 0
+  noise_scheduler:
+    _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
+    variance_type: fixed_small
+  horizon: ${task.horizon}
+  obs_dim: ${obs_dim}
+  action_dim: ${action_dim}
+  n_action_steps: ${eval:'${task.n_action_steps}+${task.n_latency_steps}'}
+  n_obs_steps: ${task.n_obs_steps}
+  num_inference_steps: 100
+  obs_as_cond: ${task.obs_as_cond}
+  pred_action_steps_only: ${task.pred_action_steps_only}
+dataloader:
+  batch_size: 256
+  num_workers: 1
+val_dataloader:
+  batch_size: 256
+  num_workers: 1
+optimizer:
+  learning_rate: 0.0001
+  weight_decay: 0.001
+training:
+  resume: true
+  lr_warmup_steps: 1000
+  num_epochs: 5000
+  num_training_steps: null
+  lr_num_training_steps: null
+  rollout_every: 50
+  rollout_first_step: null
+  rollout_every_steps: null
+  rollout_num_points: null
+  rollout_epoch_stride: null
+  checkpoint_every: 50
+logging:
+  project: liespline-dp
+  resume: true
+  tags:
+  - baseline_lowdim
+  - ${task_name}
+  - ${exp_name}
+checkpoint:
+  topk:
+    monitor_key: test_mean_score
+    mode: max
+    format_str: epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt
+  save_final_ema_ckpt: false

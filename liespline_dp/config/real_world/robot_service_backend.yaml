@@ -1,0 +1,15 @@
+rpc_address: ipc:///tmp/ur5e_robot_service/rpc.sock
+stream_address: ipc:///tmp/ur5e_robot_service/stream.sock
+rpc_timeout: 3.0
+heartbeat_interval: 0.2
+status_staleness_timeout: 1.0
+observation_max_age: 0.25
+observation_max_skew: 0.08
+observation_wait_timeout: 0.25
+action_lead_margin: 0.01
+timeout_retry_count: 1
+required_service_fields:
+  - robot_tcp_pose
+  - gripper_actual_q
+  - wrist_rgb
+  - global_rgb

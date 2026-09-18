@@ -1,0 +1,112 @@
+# Shared task parameters; modality files only add disjoint fields.
+tcp_target_quat_order: xyzw
+trajectory_dim: 6
+past_action_visible: false
+n_latency_steps: 2
+n_infer_steps: ${eval:'${.bspline.n_action_steps}-${.n_latency_steps}'}
+shape_meta:
+  obs:
+    wrist_rgb:
+      shape:
+      - 3
+      - 240
+      - 320
+      type: rgb
+    global_rgb:
+      shape:
+      - 3
+      - 240
+      - 320
+      type: rgb
+    eef_pos:
+      shape:
+      - 3
+      type: low_dim
+    eef_quat:
+      shape:
+      - 4
+      type: low_dim
+bspline:
+  degree: 3
+  prefix_cp_steps: ${.degree}
+  pred_horizon: 8
+  control_point_stride: 2
+  exec_horizon: 4
+  n_action_steps: ${eval:'${.exec_horizon} * ${.control_point_stride}'}
+  n_obs_steps: 2
+  sample_stride: 1
+  pad_terminal: true
+  control_frequency_hz: 15.0
+se3:
+  representation: local_tangent_control_pose
+  spline_eval: cumulative_lie
+  tangent_order: rho_phi
+  increment_side: right
+  fit_translation_scale_m: 1.0
+  fit_rotation_scale_rad: 1.0
+  pose_action_format: xyz_rotation_6d
+  num_robots: 1
+  binarize_gripper: false
+  gripper_bounds:
+  - 0.0
+  - 5.0
+  gripper_representation: zoh_control_point
+  gripper_spline_degree: 0
+  gripper_label_source: gripper_target_q
+  gripper_label_construction: binary_intent_causal_zoh
+  gripper_intent_hysteresis_q: 0.25
+  initial_gripper: null
+action_pose_adapter:
+  _target_: liespline_dp.common.action_pose_adapter.RealRobotActionPoseAdapter
+  action_format: ${..action_format}
+  gripper_bounds: ${..se3.gripper_bounds}
+conversion:
+  start_offset_augmentation:
+    enabled: true
+    num_offsets: ${...bspline.control_point_stride}
+  fit_method: cumulative_lie_lsq
+  fit_point_weight:
+    enabled: true
+    base_weight: 1.0
+    proximity_weight: 2.0
+    event_weight: 4.0
+    proximity_neighborhood: 2
+    event_neighborhood: 1
+    gripper:
+      min_delta_q: 0.1
+      min_run_steps: 1
+    tactile:
+      enabled: false
+      key: tactile_active_total_raw
+      fz_axis: 2
+      min_delta_raw: 100.0
+      robust_multiplier: 0.0
+      min_run_steps: 1
+dataset:
+  _target_: liespline_dp.dataset.real_robot_bspline_se3_image_dataset.RealRobotBsplineSE3ImageDataset
+  shape_meta: ${..shape_meta}
+  zarr_path: ${..conversion.output_path}
+  degree: ${..bspline.degree}
+  prefix_cp_steps: ${..bspline.prefix_cp_steps}
+  control_point_stride: ${..bspline.control_point_stride}
+  exec_horizon: ${..bspline.exec_horizon}
+  n_action_steps: ${..bspline.n_action_steps}
+  n_latency_steps: ${..n_latency_steps}
+  n_obs_steps: ${..bspline.n_obs_steps}
+  trajectory_horizon: ${eval:'${..bspline.prefix_cp_steps} + ${..bspline.pred_horizon}'}
+  trajectory_key: trajectory
+  condition_data_key: condition_data
+  condition_mask_key: condition_mask
+  pose_waypoint_key: pose_waypoint
+  action_format: ${..action_format}
+  control_frequency_hz: ${..bspline.control_frequency_hz}
+  gripper_bounds: ${..se3.gripper_bounds}
+  gripper_representation: ${..se3.gripper_representation}
+  gripper_spline_degree: ${..se3.gripper_spline_degree}
+  gripper_label_source: ${..se3.gripper_label_source}
+  gripper_label_construction: ${..se3.gripper_label_construction}
+  start_offset_augmentation_enabled: ${..conversion.start_offset_augmentation.enabled}
+  num_start_offsets: ${..conversion.start_offset_augmentation.num_offsets}
+  seed: 42
+  val_ratio: 0.02
+  max_train_source_episodes: null
